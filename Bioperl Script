@@ -1,0 +1,51 @@
+use strict;
+use warnings;
+use Bio::AlignIO;
+use Bio::Align::DNAStatistics;
+
+my $file = $ARGV[0];
+my $idfile = $ARGV[1];
+
+if ($file eq "" ) {
+  $file = "NT_MSA_S_protein.fasta";
+} elsif ($idfile eq "" ) {
+  $idfile = "NT_ID_S_protein.csv";
+}
+
+
+#### Considerando un archivo
+my @contentIDS;
+
+open (LIST, $idfile) or die;
+while (my $l = <LIST>) {
+  $l =~ s/\n//g; # eliminar newline
+	$l =~ s/\r//g; # eliminar retorno de carro
+  next if (length($l) < 1);
+  push @contentIDS, $l;
+}
+close LIST;
+
+#### .... colocar la lista de ids del fasta de forma ordenada y no redundante en el array
+my $stats = Bio::Align::DNAStatistics->new();
+my $alignin = Bio::AlignIO->new(-format => 'fasta', -file   => $file);  ### $file es el alineamiento
+while (my $aln = $alignin->next_aln) {
+  #print "reading...A\n"; ### DIAG
+  my $matrix = $stats->distance(-align => $aln, -method => 'Tajima-Nei');
+  #print "reading...B\n"; ### DIAG
+  ### Obtaining values for each pair (DISTANCE!)
+  WL1:
+  foreach my $aaa (@contentIDS) { ### identificador #1
+  	WL2:
+  	foreach my $baa (@contentIDS) { ### identificador #2
+  		next (WL2) if ($aaa eq $baa);
+      my $data =  $matrix->get_entry($aaa, $baa);
+      #($data = 0) if ($data < 0);
+  		print "DISTANCE\t$aaa\t$baa\t$data\n";
+  	} # END WL2
+  } # END WL1
+}
+
+exit;
+
+
+#
